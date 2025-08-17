@@ -9,11 +9,12 @@
 mod timer;
 pub mod tokio;
 
+pub use futures_util::io::{AsyncRead as Read, AsyncWrite as Write};
+
 pub use self::{
     timer::{Sleep, Timer},
     tokio::{TokioExecutor, TokioIo},
 };
-pub use futures_util::io::{AsyncRead as Read, AsyncWrite as Write};
 
 /// An executor of futures.
 ///

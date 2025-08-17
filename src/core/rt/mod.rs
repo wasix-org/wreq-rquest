@@ -13,7 +13,7 @@ pub mod tokio;
 
 pub(crate) use self::io::{read, write_all};
 pub use self::{
-    io::{Read, ReadBuf, ReadBufCursor, Write},
+    io::{Read, Write},
     timer::{Sleep, Timer},
     tokio::{TokioExecutor, TokioIo},
 };

@@ -690,7 +690,7 @@ mod tests {
     use std::{pin::Pin, time::Duration};
 
     use super::*;
-    use crate::core::rt::{Read, ReadBuf};
+    use crate::core::rt::Read;
 
     impl MemRead for &[u8] {
         fn read_mem(&mut self, _: &mut Context<'_>, len: usize) -> Poll<io::Result<Bytes>> {
@@ -708,10 +708,9 @@ mod tests {
 
     impl MemRead for &mut (dyn Read + Unpin) {
         fn read_mem(&mut self, cx: &mut Context<'_>, len: usize) -> Poll<io::Result<Bytes>> {
-            let mut v = vec![0; len];
-            let mut buf = ReadBuf::new(&mut v);
-            ready!(Pin::new(self).poll_read(cx, buf.unfilled())?);
-            Poll::Ready(Ok(Bytes::copy_from_slice(buf.filled())))
+            let mut buf = vec![0; len];
+            let n = ready!(Pin::new(self).poll_read(cx, &mut buf[..])?);
+            Poll::Ready(Ok(Bytes::copy_from_slice(&buf[..n])))
         }
     }
 

@@ -40,7 +40,7 @@ mod sealed {
     use crate::{
         core::{
             client::connect::{Connected, Connection},
-            rt::{Read, ReadBufCursor, Write},
+            rt::{Read, Write},
         },
         tls::TlsInfo,
         util::Escape,

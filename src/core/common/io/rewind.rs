@@ -4,9 +4,9 @@ use std::{
     task::{Context, Poll},
 };
 
-use bytes::{Buf, Bytes};
+use bytes::{Buf, BufMut, Bytes};
 
-use crate::core::rt::{Read, ReadBufCursor, Write};
+use crate::core::rt::{Read, Write};
 
 /// Combine a buffer with an IO, rewinding reads to use the buffer.
 #[derive(Debug)]
@@ -45,12 +45,12 @@ where
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        mut buf: ReadBufCursor<'_>,
-    ) -> Poll<io::Result<()>> {
+        mut buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
         if let Some(mut prefix) = self.pre.take() {
             // If there are no remaining bytes, let the bytes get dropped.
             if !prefix.is_empty() {
-                let copy_len = cmp::min(prefix.len(), buf.remaining());
+                let copy_len = cmp::min(prefix.len(), buf.len());
                 // TODO: There should be a way to do following two lines cleaner...
                 buf.put_slice(&prefix[..copy_len]);
                 prefix.advance(copy_len);
@@ -59,11 +59,33 @@ where
                     self.pre = Some(prefix);
                 }
 
-                return Poll::Ready(Ok(()));
+                return Poll::Ready(Ok(copy_len));
             }
         }
         Pin::new(&mut self.inner).poll_read(cx, buf)
     }
+    // fn poll_read(
+    //     mut self: Pin<&mut Self>,
+    //     cx: &mut Context<'_>,
+    //     mut buf: ReadBufCursor<'_>,
+    // ) -> Poll<io::Result<()>> {
+    //     if let Some(mut prefix) = self.pre.take() {
+    //         // If there are no remaining bytes, let the bytes get dropped.
+    //         if !prefix.is_empty() {
+    //             let copy_len = cmp::min(prefix.len(), buf.remaining());
+    //             // TODO: There should be a way to do following two lines cleaner...
+    //             buf.put_slice(&prefix[..copy_len]);
+    //             prefix.advance(copy_len);
+    //             // Put back what's left
+    //             if !prefix.is_empty() {
+    //                 self.pre = Some(prefix);
+    //             }
+
+    //             return Poll::Ready(Ok(()));
+    //         }
+    //     }
+    //     Pin::new(&mut self.inner).poll_read(cx, buf)
+    // }
 }
 
 impl<T> Write for Rewind<T>
@@ -90,12 +112,8 @@ where
         Pin::new(&mut self.inner).poll_flush(cx)
     }
 
-    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Pin::new(&mut self.inner).poll_shutdown(cx)
-    }
-
-    fn is_write_vectored(&self) -> bool {
-        self.inner.is_write_vectored()
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.inner).poll_close(cx)
     }
 }
 

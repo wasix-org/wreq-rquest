@@ -22,7 +22,7 @@ use crate::core::{
     Error,
     client::proto::h2::ping::Recorder,
     error::BoxError,
-    rt::{Read, ReadBufCursor, Write},
+    rt::{Read, Write},
 };
 
 /// Default initial stream window size defined in HTTP2 spec.
@@ -274,12 +274,12 @@ where
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        mut read_buf: ReadBufCursor<'_>,
-    ) -> Poll<Result<(), std::io::Error>> {
+        read_buf: &mut [u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
         if self.buf.is_empty() {
             self.buf = loop {
                 match ready!(self.recv_stream.poll_data(cx)) {
-                    None => return Poll::Ready(Ok(())),
+                    None => return Poll::Ready(Ok(0)),
                     Some(Ok(buf)) if buf.is_empty() && !self.recv_stream.is_end_stream() => {
                         continue;
                     }
@@ -289,7 +289,7 @@ where
                     }
                     Some(Err(e)) => {
                         return Poll::Ready(match e.reason() {
-                            Some(Reason::NO_ERROR) | Some(Reason::CANCEL) => Ok(()),
+                            Some(Reason::NO_ERROR) | Some(Reason::CANCEL) => Ok(0),
                             Some(Reason::STREAM_CLOSED) => {
                                 Err(std::io::Error::new(std::io::ErrorKind::BrokenPipe, e))
                             }
@@ -299,11 +299,11 @@ where
                 }
             };
         }
-        let cnt = std::cmp::min(self.buf.len(), read_buf.remaining());
-        read_buf.put_slice(&self.buf[..cnt]);
+        let cnt = std::cmp::min(self.buf.len(), read_buf.len());
+        read_buf[..cnt].copy_from_slice(&self.buf[..cnt]);
         self.buf.advance(cnt);
         let _ = self.recv_stream.flow_control().release_capacity(cnt);
-        Poll::Ready(Ok(()))
+        Poll::Ready(Ok(cnt))
     }
 }
 
@@ -352,7 +352,7 @@ where
         Poll::Ready(Ok(()))
     }
 
-    fn poll_shutdown(
+    fn poll_close(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<(), std::io::Error>> {

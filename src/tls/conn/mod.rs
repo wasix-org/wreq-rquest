@@ -34,7 +34,7 @@ use crate::{
             ConnectRequest, Identifier,
             connect::{Connected, Connection},
         },
-        rt::{Read, ReadBufCursor, TokioIo, Write},
+        rt::{Read, TokioIo, Write},
     },
     error::BoxError,
     sync::Mutex,
@@ -602,8 +602,8 @@ where
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: ReadBufCursor<'_>,
-    ) -> Poll<Result<(), std::io::Error>> {
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
         match &mut *self {
             MaybeHttpsStream::Http(inner) => Pin::new(&mut TokioIo::new(inner)).poll_read(cx, buf),
             MaybeHttpsStream::Https(inner) => Pin::new(&mut TokioIo::new(inner)).poll_read(cx, buf),
@@ -637,10 +637,10 @@ where
         }
     }
 
-    fn poll_shutdown(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<io::Result<()>> {
+    fn poll_close(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<io::Result<()>> {
         match &mut *self {
-            MaybeHttpsStream::Http(inner) => Pin::new(&mut TokioIo::new(inner)).poll_shutdown(ctx),
-            MaybeHttpsStream::Https(inner) => Pin::new(&mut TokioIo::new(inner)).poll_shutdown(ctx),
+            MaybeHttpsStream::Http(inner) => Pin::new(&mut TokioIo::new(inner)).poll_close(ctx),
+            MaybeHttpsStream::Https(inner) => Pin::new(&mut TokioIo::new(inner)).poll_close(ctx),
         }
     }
 }

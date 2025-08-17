@@ -38,7 +38,7 @@ use tokio::sync::oneshot;
 use crate::core::{
     Error, Result,
     common::io::Rewind,
-    rt::{Read, ReadBufCursor, Write},
+    rt::{Read, Write},
 };
 
 /// An upgraded HTTP connection.
@@ -104,8 +104,8 @@ impl Read for Upgraded {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: ReadBufCursor<'_>,
-    ) -> Poll<io::Result<()>> {
+        buf: &mut [u8],
+    ) -> Poll<io::Result<usize>> {
         Pin::new(&mut self.io).poll_read(cx, buf)
     }
 }
@@ -131,12 +131,8 @@ impl Write for Upgraded {
         Pin::new(&mut self.io).poll_flush(cx)
     }
 
-    fn poll_shutdown(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
-        Pin::new(&mut self.io).poll_shutdown(cx)
-    }
-
-    fn is_write_vectored(&self) -> bool {
-        self.io.is_write_vectored()
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<io::Result<()>> {
+        Pin::new(&mut self.io).poll_close(cx)
     }
 }
 

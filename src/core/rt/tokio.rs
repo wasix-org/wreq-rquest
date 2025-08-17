@@ -8,7 +8,7 @@ use std::{
 
 use pin_project_lite::pin_project;
 
-use crate::core::rt::{Executor, Read, ReadBuf, ReadBufCursor, Sleep, Timer, Write};
+use crate::core::rt::{Executor, Read, Sleep, Timer, Write};
 
 /// Future executor that utilises `tokio` threads.
 #[non_exhaustive]
@@ -96,20 +96,13 @@ where
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        mut buf: ReadBufCursor<'_>,
-    ) -> Poll<Result<(), std::io::Error>> {
-        let n = unsafe {
-            let mut tbuf = tokio::io::ReadBuf::uninit(buf.as_mut());
-            match tokio::io::AsyncRead::poll_read(self.project().inner, cx, &mut tbuf) {
-                Poll::Ready(Ok(())) => tbuf.filled().len(),
-                other => return other,
-            }
-        };
-
-        unsafe {
-            buf.advance(n);
+        buf: &mut [u8],
+    ) -> Poll<std::io::Result<usize>> {
+        let mut buf = tokio::io::ReadBuf::new(buf);
+        match self.project().inner.poll_read(cx, &mut buf)? {
+            Poll::Pending => Poll::Pending,
+            Poll::Ready(_) => Poll::Ready(Ok(buf.filled().len())),
         }
-        Poll::Ready(Ok(()))
     }
 }
 
@@ -132,25 +125,16 @@ where
     }
 
     #[inline]
-    fn poll_shutdown(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), std::io::Error>> {
-        tokio::io::AsyncWrite::poll_shutdown(self.project().inner, cx)
-    }
-
-    #[inline]
-    fn is_write_vectored(&self) -> bool {
-        tokio::io::AsyncWrite::is_write_vectored(&self.inner)
-    }
-
-    #[inline]
     fn poll_write_vectored(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         bufs: &[std::io::IoSlice<'_>],
     ) -> Poll<Result<usize, std::io::Error>> {
         tokio::io::AsyncWrite::poll_write_vectored(self.project().inner, cx, bufs)
+    }
+
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        tokio::io::AsyncWrite::poll_shutdown(self.project().inner, cx)
     }
 }
 
@@ -161,26 +145,14 @@ where
     fn poll_read(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        tbuf: &mut tokio::io::ReadBuf<'_>,
+        buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
-        let filled = tbuf.filled().len();
-        let sub_filled = unsafe {
-            let mut buf = ReadBuf::uninit(tbuf.unfilled_mut());
-
-            match Read::poll_read(self.project().inner, cx, buf.unfilled()) {
-                Poll::Ready(Ok(())) => buf.filled().len(),
-                other => return other,
-            }
+        let slice = buf.initialize_unfilled();
+        let n = match self.project().inner.poll_read(cx, slice)? {
+            Poll::Pending => return Poll::Pending,
+            Poll::Ready(n) => n,
         };
-
-        let n_filled = filled + sub_filled;
-        // At least sub_filled bytes had to have been initialized.
-        let n_init = sub_filled;
-        unsafe {
-            tbuf.assume_init(n_init);
-            tbuf.set_filled(n_filled);
-        }
-
+        buf.advance(n);
         Poll::Ready(Ok(()))
     }
 }
@@ -204,25 +176,20 @@ where
     }
 
     #[inline]
-    fn poll_shutdown(
-        self: Pin<&mut Self>,
-        cx: &mut Context<'_>,
-    ) -> Poll<Result<(), std::io::Error>> {
-        Write::poll_shutdown(self.project().inner, cx)
-    }
-
-    #[inline]
-    fn is_write_vectored(&self) -> bool {
-        Write::is_write_vectored(&self.inner)
-    }
-
-    #[inline]
     fn poll_write_vectored(
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         bufs: &[std::io::IoSlice<'_>],
     ) -> Poll<Result<usize, std::io::Error>> {
         Write::poll_write_vectored(self.project().inner, cx, bufs)
+    }
+
+    #[inline]
+    fn poll_shutdown(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        Write::poll_close(self.project().inner, cx)
     }
 }
 

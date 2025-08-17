@@ -177,14 +177,6 @@ impl<T: AsyncRead + AsyncWrite + Unpin> Read for TlsConn<T> {
     ) -> Poll<io::Result<usize>> {
         Read::poll_read(self.project().inner, cx, buf)
     }
-    // fn poll_read(
-    //     self: Pin<&mut Self>,
-    //     cx: &mut Context,
-    //     buf: ReadBufCursor<'_>,
-    // ) -> Poll<tokio::io::Result<()>> {
-    //     let this = self.project();
-    //     Read::poll_read(this.inner, cx, buf)
-    // }
 }
 
 impl<T: AsyncRead + AsyncWrite + Unpin> Write for TlsConn<T> {

@@ -5,13 +5,14 @@ use std::{
     task::{Context, Poll, ready},
 };
 
+use bytes::{Buf, BufMut, Bytes, BytesMut};
+
 use super::{Http1Transaction, ParseContext, ParsedMessage};
 use crate::core::{
     Error,
     common::buf::BufList,
     rt::{Read, Write},
 };
-use bytes::{Buf, BufMut, Bytes, BytesMut};
 
 /// The initial buffer size allocated before trying to read from IO.
 pub(crate) const INIT_BUFFER_SIZE: usize = 8192;
@@ -59,11 +60,6 @@ where
     B: Buf,
 {
     pub(crate) fn new(io: T) -> Buffered<T, B> {
-        // let strategy = if io.is_write_vectored() {
-        //     WriteStrategy::Queue
-        // } else {
-        //     WriteStrategy::Flatten
-        // };
         let write_buf = WriteBuf::new(WriteStrategy::Flatten);
         Buffered {
             flush_pipeline: false,
@@ -209,16 +205,19 @@ where
 
         // SAFETY: ReadBuf and poll_read promise not to set any uninitialized
         // bytes onto `dst`.
-        let buf = {
+        #[allow(unsafe_code)]
+        let buf = unsafe {
             // SAFETY: We are about to fill these bytes, and poll_read will only write to them.
             // In recent bytes versions, chunk_mut() returns &mut UninitSlice.
             // Use as_mut_slice() to get &mut [u8].
-            &mut self.read_buf.as_mut()
+            let uninit = self.read_buf.chunk_mut().as_uninit_slice_mut();
+            std::mem::transmute(uninit)
         };
-        // let mut buf = ReadBuf::uninit(dst);
+
         match Pin::new(&mut self.io).poll_read(cx, buf) {
             Poll::Ready(Ok(n)) => {
                 trace!("received {} bytes", n);
+                #[allow(unsafe_code)]
                 unsafe {
                     // Safety: we just read that many bytes into the
                     // uninitialized part of the buffer, so this is okay.

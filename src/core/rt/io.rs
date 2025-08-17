@@ -1,9 +1,9 @@
-pub use futures_util::io::AsyncRead as Read;
-pub use futures_util::io::AsyncWrite as Write;
 use std::{
     pin::Pin,
     task::{Poll, ready},
 };
+
+pub use futures_util::io::{AsyncRead as Read, AsyncWrite as Write};
 
 pub(crate) async fn read<T>(io: &mut T, buf: &mut [u8]) -> Result<usize, std::io::Error>
 where

@@ -55,7 +55,7 @@ stream = ["tokio/fs", "dep:tokio-util", "dep:sync_wrapper"]
 socks = ["dep:tokio-socks"]
 
 # Enable WebSocket support.
-ws = ["dep:async-tungstenite", "futures-util/std", "futures-util/io"]
+ws = ["dep:async-tungstenite"]
 
 # Enable webpki-roots for TLS certificate validation.
 webpki-roots = ["dep:webpki-root-certs"]

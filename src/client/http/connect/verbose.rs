@@ -60,23 +60,13 @@ mod sealed {
     impl<T: Read + Write + Unpin> Read for Wrapper<T> {
         fn poll_read(
             mut self: Pin<&mut Self>,
-            cx: &mut Context,
-            mut buf: ReadBufCursor<'_>,
-        ) -> Poll<std::io::Result<()>> {
-            // TODO: This _does_ forget the `init` len, so it could result in
-            // re-initializing twice. Needs upstream support, perhaps.
-            // SAFETY: Passing to a ReadBuf will never de-initialize any bytes.
-            let mut vbuf = crate::core::rt::ReadBuf::uninit(unsafe { buf.as_mut() });
-            match Pin::new(&mut self.inner).poll_read(cx, vbuf.unfilled()) {
-                Poll::Ready(Ok(())) => {
-                    trace!("{:08x} read: {:?}", self.id, Escape::new(vbuf.filled()));
-                    let len = vbuf.filled().len();
-                    // SAFETY: The two cursors were for the same buffer. What was
-                    // filled in one is safe in the other.
-                    unsafe {
-                        buf.advance(len);
-                    }
-                    Poll::Ready(Ok(()))
+            cx: &mut Context<'_>,
+            buf: &mut [u8],
+        ) -> Poll<io::Result<usize>> {
+            match Pin::new(&mut self.inner).poll_read(cx, buf) {
+                Poll::Ready(Ok(n)) => {
+                    trace!("{:08x} read: {:?}", self.id, Escape::new(&buf[..n]));
+                    Poll::Ready(Ok(n))
                 }
                 Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
                 Poll::Pending => Poll::Pending,
@@ -119,10 +109,6 @@ mod sealed {
             }
         }
 
-        fn is_write_vectored(&self) -> bool {
-            self.inner.is_write_vectored()
-        }
-
         fn poll_flush(
             mut self: Pin<&mut Self>,
             cx: &mut Context,
@@ -130,11 +116,11 @@ mod sealed {
             Pin::new(&mut self.inner).poll_flush(cx)
         }
 
-        fn poll_shutdown(
+        fn poll_close(
             mut self: Pin<&mut Self>,
             cx: &mut Context,
         ) -> Poll<Result<(), std::io::Error>> {
-            Pin::new(&mut self.inner).poll_shutdown(cx)
+            Pin::new(&mut self.inner).poll_close(cx)
         }
     }
 

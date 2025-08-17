@@ -5,18 +5,15 @@
 //!
 //! - Executors
 //! - Timers
-//! - IO transports
 
-mod io;
 mod timer;
 pub mod tokio;
 
-pub(crate) use self::io::{read, write_all};
 pub use self::{
-    io::{Read, Write},
     timer::{Sleep, Timer},
     tokio::{TokioExecutor, TokioIo},
 };
+pub use futures_util::io::{AsyncRead as Read, AsyncWrite as Write};
 
 /// An executor of futures.
 ///

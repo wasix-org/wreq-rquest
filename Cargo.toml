@@ -1,6 +1,6 @@
 [package]
 name = "rquest"
-version = "2.2.1"
+version = "2.2.1+wasix.1"
 description = "An ergonomic, all-in-one HTTP Client for spoofing any browser with TLS, JA3/JA4, and HTTP2 fingerprints"
 keywords = ["http", "client", "websocket", "ja3", "ja4"]
 categories = ["web-programming::http-client"]
@@ -75,11 +75,8 @@ url = "2.5"
 bytes = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_urlencoded = "0.7.1"
-tower = { version = "0.5.2", default-features = false, features = [
-    "timeout",
-    "util",
-], git = "https://github.com/wasix-org/tower", branch = "wasix-0.5.2" }
-tower-service = { version = "0.3.2", git = "https://github.com/wasix-org/tower", branch = "wasix-0.5.2" }
+tower = { version = "0.5.2", default-features = false, features = [     "timeout",     "util", ] }
+tower-service = "0.3.3"
 futures-util = { version = "0.3.0", default-features = false }
 sync_wrapper = { version = "1.0", features = ["futures"] }
 antidote = "1"
@@ -100,11 +97,7 @@ hyper2 = { version = "1.5.0", features = ["http1", "http2", "client"] }
 log = "0.4"
 mime = "0.3.17"
 percent-encoding = "2.3"
-tokio = { version = "=1.47.0", default-features = false, features = [
-    "net",
-    "time",
-    "rt",
-], git = "https://github.com/wasix-org/tokio", branch = "wasix-1.47.0" }
+tokio = { version = "1.47.0", default-features = false, features = [     "net",     "time",     "rt", ] }
 pin-project-lite = "0.2.0"
 ipnet = "2.10.0"
 
@@ -113,13 +106,8 @@ socket2 = { version = "0.6.0", features = ["all"] }
 lru = { version = "0.13", default-features = false }
 
 ## boring-tls
-boring2 = { version = "=4.15.13", features = [
-    "pq-experimental",
-    "cert-compression",
-], git = "https://github.com/wasix-org/boring2", branch = "wasix-4.15.13" }
-boring-sys2 = { version = "=4.15.13", features = [
-    "pq-experimental",
-], git = "https://github.com/wasix-org/boring2", branch = "wasix-4.15.13" }
+boring2 = { version = "4.15.13", features = [     "pq-experimental",     "cert-compression", ] }
+boring-sys2 = { version = "4.15.13", features = [     "pq-experimental", ] }
 tokio-boring2 = { version = "4.15.13", features = ["pq-experimental"] }
 foreign-types = "0.5.0"
 linked_hash_set = "0.1"
@@ -143,10 +131,7 @@ cookie_store = { version = "0.21", optional = true }
 async-compression = { version = "0.4.21", default-features = false, features = [
     "tokio",
 ], optional = true }
-tokio-util = { version = "0.7.15", default-features = false, features = [
-    "codec",
-    "io",
-], optional = true, git = "https://github.com/wasix-org/tokio", branch = "wasix-1.47.0" }
+tokio-util = { version = "0.7.15", default-features = false, features = [     "codec",     "io", ], optional = true }
 
 ## socks
 tokio-socks = { version = "0.5.2", optional = true }
@@ -164,49 +149,20 @@ windows-registry = "0.5.0"
 system-configuration = "0.6.0"
 
 [target.'cfg(any(target_os = "ios", target_os = "visionos", target_os = "macos", target_os = "tvos", target_os = "watchos"))'.dependencies]
-libc = { version = "=0.2.169", git = "https://github.com/wasix-org/libc", branch = "wasix-0.2.169" }
+libc = "0.2.169"
 
 [dev-dependencies]
-hyper = { version = "1.6.0", default-features = false, features = [
-    "http1",
-    "http2",
-    "client",
-    "server",
-], git = "https://github.com/wasix-org/hyper", branch = "wasix-1.6.0" }
-hyper-util = { version = "0.1.16", features = [
-    "http1",
-    "http2",
-    "client",
-    "client-legacy",
-    "server-auto",
-    "tokio",
-], git = "https://github.com/wasix-org/hyper-util", branch = "wasix-0.1.16" }
+hyper = { version = "1.6.0", default-features = false, features = [     "http1",     "http2",     "client",     "server", ] }
+hyper-util = { version = "0.1.16", features = [     "http1",     "http2",     "client",     "client-legacy",     "server-auto",     "tokio", ] }
 env_logger = "0.11.6"
 serde = { version = "1.0", features = ["derive"] }
 libflate = "2.0.0"
 zstd = { version = "0.13" }
 doc-comment = "0.3"
-tokio = { version = "=1.47.0", default-features = false, features = [
-    "macros",
-    "rt-multi-thread",
-], git = "https://github.com/wasix-org/tokio", branch = "wasix-1.47.0" }
+tokio = { version = "1.47.0", default-features = false, features = [     "macros",     "rt-multi-thread", ] }
 futures = { version = "0.3.0", default-features = false, features = ["std"] }
-tower = { version = "0.5.2", default-features = false, features = [
-    "limit",
-], git = "https://github.com/wasix-org/tower", branch = "wasix-0.5.2" }
-libc = { version = "=0.2.169", git = "https://github.com/wasix-org/libc", branch = "wasix-0.2.169" }
-
-[patch.crates-io]
-tower = { git = "https://github.com/wasix-org/tower", branch = "wasix-0.5.2" }
-tower-service = { git = "https://github.com/wasix-org/tower", branch = "wasix-0.5.2" }
-libc = { git = "https://github.com/wasix-org/libc", branch = "wasix-0.2.169" }
-tokio = { git = "https://github.com/wasix-org/tokio", branch = "wasix-1.47.0" }
-tokio-util = { git = "https://github.com/wasix-org/tokio", branch = "wasix-1.47.0" }
-socket2 = { git = "https://github.com/wasix-org/socket2", branch = "wasix-0.6.0" }
-hyper = { git = "https://github.com/wasix-org/hyper", branch = "wasix-1.6.0" }
-hyper-util = { git = "https://github.com/wasix-org/hyper-util", branch = "wasix-0.1.16" }
-boring2 = { git = "https://github.com/wasix-org/boring2", branch = "wasix-4.15.13" }
-boring-sys2 = { git = "https://github.com/wasix-org/boring2", branch = "wasix-4.15.13" }
+tower = { version = "0.5.2", default-features = false, features = [     "limit", ] }
+libc = "0.2.169"
 
 [lib]
 doctest = false
